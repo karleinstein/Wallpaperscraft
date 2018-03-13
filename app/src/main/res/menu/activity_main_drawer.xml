@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_3d"
+            android:title="3D" />
+        <item
+            android:id="@+id/nav_abtract"
+            android:title="Abtract" />
+        <item
+            android:id="@+id/nav_animals"
+            android:title="Animals" />
+        <item
+            android:id="@+id/nav_anime"
+            android:title="Anime" />
+        <item
+            android:id="@+id/nav_city"
+            android:title="City" />
+        <item
+            android:id="@+id/nav_fantasy"
+            android:title="Fantasy" />
+        <item
+            android:id="@+id/nav_girls"
+            android:title="Girls" />
+        <item
+            android:id="@+id/nav_nature"
+            android:title="Nature" />
+        <item
+            android:id="@+id/nav_sport"
+            android:title="Sport" />
+
+    </group>
+
+</menu>
