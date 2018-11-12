@@ -66,7 +66,7 @@ public class CustomAdapter extends BaseAdapter {
         viewHolder.imgHinhAnh=convertView.findViewById(R.id.imgHinhAnh);
         final HinhAnh hinhAnh= (HinhAnh) getItem(position);
             //Picasso.with(context).setLoggingEnabled(false);
-        Glide.with(context).load(hinhAnh.hinhAnhz).placeholder(R.mipmap.yeah).error(R.mipmap.yeah).into(viewHolder.imgHinhAnh);
+        Glide.with(context).load(hinhAnh.hinhAnhz).into(viewHolder.imgHinhAnh);
         return convertView;
     }
     private static class ViewHolder{

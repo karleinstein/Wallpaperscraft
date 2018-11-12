@@ -30,6 +30,7 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
@@ -54,6 +55,7 @@ public class ShowLayout extends AppCompatActivity{
     String b;
     String y,g,t,ten,hinh;
     String a;
+    Bitmap result;
     ImageView imageView;
     ProgressDialog progressDialog;
     private InterstitialAd mInterstitialAd;
@@ -105,20 +107,12 @@ public class ShowLayout extends AppCompatActivity{
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                imageView.buildDrawingCache();
-                Bitmap bmap = imageView.getDrawingCache();
-                WallpaperManager m=WallpaperManager.getInstance(ShowLayout.this);
+                TaskTemp taskTemp=new TaskTemp();
+                taskTemp.execute(result);
 
-                try {
-                    m.setBitmap(bmap);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-                Snackbar.make(v, "Set Wallpaper successfully", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
             }
         });
+
 
         }
 
@@ -132,6 +126,34 @@ public class ShowLayout extends AppCompatActivity{
 
 
         }
+    class TaskTemp extends AsyncTask<Bitmap,Void,Boolean>{
+
+        @Override
+        protected Boolean doInBackground(Bitmap... bitmaps) {
+            WallpaperManager m=WallpaperManager.getInstance(ShowLayout.this);
+
+            try {
+                m.setBitmap(bitmaps[0]);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressDialog.show();
+        }
+
+        @Override
+        protected void onPostExecute(Boolean aBoolean) {
+            super.onPostExecute(aBoolean);
+            progressDialog.dismiss();
+            Snackbar.make(imageView, "Set Wallpaper successfully", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+        }
+    }
         class Task extends AsyncTask<String,Void,Bitmap>
         {
             @Override
@@ -143,7 +165,8 @@ public class ShowLayout extends AppCompatActivity{
             @Override
             protected void onPostExecute(Bitmap bitmap) {
                 super.onPostExecute(bitmap);
-                imageView.setImageBitmap(bitmap);
+                result=bitmap;
+                imageView.setImageBitmap(result);
                 progressDialog.dismiss();
             }
 
@@ -161,19 +184,19 @@ public class ShowLayout extends AppCompatActivity{
                     if (document != null) {
 
                         //neu no ton tai gia tri
-                        elements = document.select("div.wb_preview");
+                        elements = document.select("div.wallpaper__placeholder");
                         for (Element element : elements) {
                             Element elementten = element.getElementsByTag("a").first();
                             Element elementhinh = element.getElementsByTag("img").first();
                             if (elementten != null) {
                                 ten = elementten.attr("href");
-                                y="https:";
-                                t=y+ten;
+                               // y="https:";
+                                t=ten;
                             }
                             if (elementhinh != null) {
                                 hinh = elementhinh.attr("src");
-                                y="https:";
-                                g=y+hinh;
+                               // y="https:";
+                                g=hinh;
                             }
                             Bitmap bitmap= BitmapFactory.decodeStream((InputStream) new URL(g).getContent());
                             return bitmap;
