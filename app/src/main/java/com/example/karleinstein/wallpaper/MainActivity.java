@@ -1,6 +1,7 @@
 package com.example.karleinstein.wallpaper;
 
 import android.annotation.SuppressLint;
+import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.app.VoiceInteractor;
 import android.app.WallpaperManager;
@@ -12,6 +13,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
@@ -37,12 +39,11 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.android.gms.ads.MobileAds;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.w3c.dom.Document;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -51,586 +52,428 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
-    CustomAdapter customAdapter, zzz;
-    TextView tvName,tvCopy;
+    CustomAdapter customAdapter;
+    TextView tvName, tvCopy;
     ArrayList<HinhAnh> hinhAnhs;
     int k = 0;
     ProgressDialog progressDialog;
-    String link="";
-    private int index = -1;
+    private Dialog dialog;
+    public DrawerLayout drawer;
+    private int size = 0;
     GridView gridView;
-    ImageView imgSkrillex;
-    String g,y;
+    String g, y;
     StringBuffer t;
-    int allz;
+    private int width;
+    private int height;
+    public Task task;
+    private String reso;
+    private int index;
+    public String url;
+    private ActionBarDrawerToggle toggle;
     String ten = "";
     String hinh = "";
     NavigationView navigationView;
     Elements elements;
     public List<HinhAnh> wallpapersList;
-    RequestQueue requestQueue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        t=new StringBuffer();
-        MobileAds.initialize(this,"ca-app-pub-3739982462015298~5713431032");
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+        dialog = new Dialog(this);
+        task = new Task();
+        drawer = findViewById(R.id.drawer_layout);
+
+        width = getIntent().getIntExtra("width", 0);
+        height = getIntent().getIntExtra("height", 0);
+        Log.d("zzz", width + "w:h" + height);
+        reso = width + "x" + height;
+        t = new StringBuffer();
+        //MobileAds.initialize(this, "ca-app-pub-3739982462015298~5713431032");
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        wallpapersList = new ArrayList<HinhAnh>();
+        wallpapersList = new ArrayList<>();
         navigationView = findViewById(R.id.nav_view);
         View headerView = navigationView.getHeaderView(0);
         tvName = headerView.findViewById(R.id.tvName);
-        tvCopy=headerView.findViewById(R.id.tvCopy);
+        tvCopy = headerView.findViewById(R.id.tvCopy);
         Typeface typeface1 = Typeface.createFromAsset(getAssets(), "fonts/BEYNO.ttf");
         tvName.setTypeface(typeface1);
         Typeface typeface = Typeface.createFromAsset(getAssets(), "fonts/scary_glyphs_and_nice_characters.ttf");
         tvCopy.setTypeface(typeface);
-        progressDialog=new ProgressDialog(MainActivity.this);
+        progressDialog = new ProgressDialog(MainActivity.this);
         progressDialog.setTitle("Loading");
         progressDialog.setMessage("Please wait...");
         progressDialog.setCanceledOnTouchOutside(false);
         hinhAnhs = new ArrayList<>();
         gridView = findViewById(R.id.imggridView);
-        imgSkrillex=findViewById(R.id.skrillex);
-        yeah();
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                HinhAnh hinhAnh1 = hinhAnhs.get(position);
+                Fragment showImage = new ShowLayout();
+                getFragmentManager().beginTransaction().add(R.id.drawer_layout, showImage)
+                        .addToBackStack(null)
+                        .commit();
+                Bundle bundle = new Bundle();
+                bundle.putString("hinhanh", hinhAnh1.getTenAnh());
+                showImage.setArguments(bundle);
+                task.cancel(true);
+                task = null;
+                task = new Task();
+
+            }
+        });
         //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         //setSupportActionBar(toolbar);
         k = 1;
         //FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        toggle = new ActionBarDrawerToggle(
                 this, drawer, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
         navigationView.setNavigationItemSelectedListener(this);
+        url = "https://wallpaperscraft.com/all/";
+        TaskAllPage taskAllPage = new TaskAllPage();
+        taskAllPage.execute(url + reso + "/");
+        task.execute(url + reso + "/");
+        setTitle("All");
     }
 
-    private void yeah() {
-        imgSkrillex.setImageResource(R.drawable.lul);
-    }
 
-    class Task extends AsyncTask<String, Void, ArrayList<HinhAnh>> {
+    public class Task extends AsyncTask<String, ArrayList<HinhAnh>, ArrayList<HinhAnh>> {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            progressDialog.show();
+            //progressDialog.show();
+            dialog.show();
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.setCancelable(false);
         }
 
         @Override
         protected void onPostExecute(ArrayList<HinhAnh> hinhAnhs) {
             super.onPostExecute(hinhAnhs);
-            gridView.setAdapter(customAdapter);
-            imgSkrillex.setImageBitmap(null);
-            progressDialog.dismiss();
+            //progressDialog.dismiss();
+        }
+
+        @Override
+        protected void onProgressUpdate(ArrayList<HinhAnh>... values) {
+            super.onProgressUpdate(values);
+            //progressDialog.dismiss();
+            dialog.dismiss();
+            if (customAdapter == null) {
+                customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
+                //gridView.setSelection(index);
+                gridView.setAdapter(customAdapter);
+            } else if (isCancelled()) {
+
+                hinhAnhs.clear();
+                customAdapter = null;
+
+            } else {
+                customAdapter.notifyDataSetChanged();
+            }
+
+
         }
 
         @Override
         protected ArrayList<HinhAnh> doInBackground(String... strings) {
-            if (allz == 1) {
-                String url[] = {"https://wallpaperscraft.com/catalog/sport"
-                        , "https://wallpaperscraft.com/catalog/sport/page2"
-                        , "https://wallpaperscraft.com/catalog/sport/page3"
-                        , "https://wallpaperscraft.com/catalog/sport/page4"
-                        , "https://wallpaperscraft.com/catalog/sport/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+            String url[] = new String[size];
+            Log.d("fuck", size + "");
+            url[0] = strings[0];
+            for (int i = 0; i < size; i++) {
+                if (i >= 1) {
+                    int in = i + 1;
+                    url[i] = strings[0] + "page" + in;
                 }
-            }
-            if (allz == 2) {
-                String url[] = {"https://wallpaperscraft.com/catalog/3d"
-                        , "https://wallpaperscraft.com/catalog/3d/page2"
-                ,"https://wallpaperscraft.com/catalog/3d/page3","https://wallpaperscraft.com/catalog/3d/page4",
-                        "https://wallpaperscraft.com/catalog/3d/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
+                if (isCancelled()) {
+                    hinhAnhs.clear();
+                    url = new String[size];
+                    break;
+                }
+                try {
+                    Log.d("test", url[i]);
+                    //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
+                    Document document = Jsoup.connect(url[i]).get();
+                    if (document != null) {
 
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
+                        //neu no ton tai gia tri
+                        elements = document.select("li.wallpapers__item");
+                        for (Element element : elements) {
+                            Element elementten = element.getElementsByTag("a").first();
+                            Element elementhinh = element.getElementsByTag("img").first();
+                            if (elementten != null) {
+                                ten = elementten.attr("href");
+                                ten = "https://wallpaperscraft.com" + ten;
 
                             }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            if (allz == 3) {
-                String url[] = {"https://wallpaperscraft.com/catalog/abstract"
-                        , "https://wallpaperscraft.com/catalog/abstract/page2"
-                        , "https://wallpaperscraft.com/catalog/abstract/page3"
-                        , "https://wallpaperscraft.com/catalog/abstract/page4"
-                        , "https://wallpaperscraft.com/catalog/abstract/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
+                            if (elementhinh != null) {
+                                hinh = elementhinh.attr("src");
+                                //y = "https://wallpaperscraft.com";
+                                g = hinh;
 
                             }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
+                            hinhAnhs.add(new HinhAnh(ten, g));
+                            t = new StringBuffer();
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+
+
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            }
-            if (allz == 4) {
-                String url[] = {"https://wallpaperscraft.com/catalog/animals"
-                        , "https://wallpaperscraft.com/catalog/animals/page2"
-                        , "https://wallpaperscraft.com/catalog/animals/page3"
-                        , "https://wallpaperscraft.com/catalog/animals/page4"
-                        , "https://wallpaperscraft.com/catalog/animals/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-                if (allz == 5) {
-                    String url[] = {"https://wallpaperscraft.com/catalog/anime"
-                            , "https://wallpaperscraft.com/catalog/anime/page2"
-                            , "https://wallpaperscraft.com/catalog/anime/page3"
-                            , "https://wallpaperscraft.com/catalog/anime/page4"
-                            , "https://wallpaperscraft.com/catalog/anime/page5"};
-                    for (int i = 0; i < url.length; i++) {
-                        try {
-                            //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                            org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                            if (document != null) {
-
-                                //neu no ton tai gia tri
-                                elements = document.select("li.wallpapers__item");
-                                for (Element element : elements) {
-                                    Element elementten = element.getElementsByTag("a").first();
-                                    Element elementhinh = element.getElementsByTag("img").first();
-                                    if (elementten != null) {
-                                        ten = elementten.attr("href");
-                                        y = "https://wallpaperscraft.com/download";
-
-                                        t.append(y).append(ten).append("/720x1280");
-                                        t.delete(37,37+10);
-                                        Log.d("test",t.toString());
-
-                                    }
-                                    if (elementhinh != null) {
-                                        hinh = elementhinh.attr("src");
-                                        //y = "https://wallpaperscraft.com";
-                                        g = hinh;
-                                    }
-                                    hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                    t=new StringBuffer();
-
-                                }
-                                customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            if (allz == 6) {
-                String url[] = {"https://wallpaperscraft.com/catalog/city"
-                        , "https://wallpaperscraft.com/catalog/city/page2"
-                        , "https://wallpaperscraft.com/catalog/city/page3"
-                        , "https://wallpaperscraft.com/catalog/city/page4"
-                        , "https://wallpaperscraft.com/catalog/city/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            if (allz == 7) {
-                String url[] = {"https://wallpaperscraft.com/catalog/fantasy"
-                        , "https://wallpaperscraft.com/catalog/fantasy/page2"
-                        , "https://wallpaperscraft.com/catalog/fantasy/page3"
-                        , "https://wallpaperscraft.com/catalog/fantasy/page4"
-                        , "https://wallpaperscraft.com/catalog/fantasy/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            if (allz == 8) {
-                String url[] = {"https://wallpaperscraft.com/catalog/tv-series"
-                        , "https://wallpaperscraft.com/catalog/tv-series/page2"
-                        , "https://wallpaperscraft.com/catalog/tv-series/page3"
-                        , "https://wallpaperscraft.com/catalog/tv-series/page4"
-                        , "https://wallpaperscraft.com/catalog/tv-series/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            if (allz == 9) {
-                String url[] = {"https://wallpaperscraft.com/catalog/nature"
-                        , "https://wallpaperscraft.com/catalog/nature/page2"
-                        , "https://wallpaperscraft.com/catalog/nature/page3"
-                        , "https://wallpaperscraft.com/catalog/nature/page4"
-                        , "https://wallpaperscraft.com/catalog/nature/page5"};
-                for (int i = 0; i < url.length; i++) {
-                    try {
-                        //org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        org.jsoup.nodes.Document document = Jsoup.connect(url[i]).get();
-                        if (document != null) {
-
-                            //neu no ton tai gia tri
-                            elements = document.select("li.wallpapers__item");
-                            for (Element element : elements) {
-                                Element elementten = element.getElementsByTag("a").first();
-                                Element elementhinh = element.getElementsByTag("img").first();
-                                if (elementten != null) {
-                                    ten = elementten.attr("href");
-                                    y = "https://wallpaperscraft.com/download";
-
-                                    t.append(y).append(ten).append("/720x1280");
-                                    t.delete(37,37+10);
-                                    Log.d("test",t.toString());
-
-                                }
-                                if (elementhinh != null) {
-                                    hinh = elementhinh.attr("src");
-                                    //y = "https://wallpaperscraft.com";
-                                    g = hinh;
-                                }
-                                hinhAnhs.add(new HinhAnh(t.toString(), g));
-                                t=new StringBuffer();
-
-                            }
-                            customAdapter = new CustomAdapter(hinhAnhs, MainActivity.this);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-                return hinhAnhs;
-            }
-        }
-
-        @Override
-        public void onBackPressed() {
-            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-            if (drawer.isDrawerOpen(GravityCompat.START)) {
-                drawer.closeDrawer(GravityCompat.START);
-            } else {
-                super.onBackPressed();
-            }
-        }
-
-        @Override
-        public boolean onCreateOptionsMenu(Menu menu) {
-            // Inflate the menu; this adds items to the action bar if it is present.
-            getMenuInflater().inflate(R.menu.main, menu);
-            return true;
-        }
-
-        @Override
-        public boolean onOptionsItemSelected(MenuItem item) {
-            // Handle action bar item clicks here. The action bar will
-            // automatically handle clicks on the Home/Up button, so long
-            // as you specify a parent activity in AndroidManifest.xml.
-            int id = item.getItemId();
-
-            //noinspection SimplifiableIfStatement
-
-            return super.onOptionsItemSelected(item);
-        }
-
-        @SuppressWarnings("StatementWithEmptyBody")
-        @Override
-        public boolean onNavigationItemSelected(MenuItem item) {
-            // Handle navigation view item clicks here.
-            switch (item.getItemId()) {
-
-                case R.id.nav_sport:
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    allz=1;
-                    Task task=new Task();
-                    task.execute("");
-                    break;
-                case R.id.nav_3d:
-                    allz=2;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task1=new Task();
-                    task1.execute("");
-                    break;
-                case R.id.nav_abtract:
-                    allz=3;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task2=new Task();
-                    task2.execute("");
-                    break;
-                case R.id.nav_animals:
-                    allz=4;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task3=new Task();
-                    task3.execute("");
-                    break;
-                case R.id.nav_anime:
-                    allz=5;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task4=new Task();
-                    task4.execute("");
-                    break;
-                case R.id.nav_city:
-                    allz=6;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task5=new Task();
-                    task5.execute("");
-                    break;
-                case R.id.nav_fantasy:
-                    allz=7;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task6=new Task();
-                    task6.execute("");
-                    break;
-                case R.id.nav_girls:
-                    allz=8;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task7=new Task();
-                    task7.execute("");
-                    break;
-                case R.id.nav_nature:
-                    allz=9;
-                    if (hinhAnhs != null) {
-                        hinhAnhs.clear();
-                    }
-                    Task task8=new Task();
-                    task8.execute("");
-                    break;
+                publishProgress(hinhAnhs);
 
             }
-            gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    HinhAnh hinhAnh1=hinhAnhs.get(position);
-                    Intent intent=new Intent(MainActivity.this,ShowLayout.class);
-                    intent.putExtra("hinhanh",hinhAnh1.getTenAnh());
-                    startActivity(intent);
-                }
-            });
-            DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-            drawer.closeDrawer(GravityCompat.START);
-            return true;
+
+
+            return hinhAnhs;
+
         }
     }
+
+    class TaskAllPage extends AsyncTask<String, Void, Integer> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            dialog.show();
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.setCancelable(false);
+        }
+
+        @Override
+        protected Integer doInBackground(String... strings) {
+            try {
+                Document document = Jsoup.connect(strings[0]).get();
+                if (document != null) {
+
+                    //neu no ton tai gia tri
+                    elements = document.select("ul.pager__list");
+                    Elements elements2 = elements.select("li.pager__item");
+                    Elements elements3 = elements2.select("li.pager__item_last-page");
+                    for (Element element : elements3) {
+                        Element elementten = element.getElementsByTag("a").first();
+                        if (elementten != null) {
+                            ten = elementten.attr("href");
+
+                        }
+                    }
+                    StringBuffer temp = new StringBuffer();
+                    for (int i = ten.length() - 1; i >= 0; i--) {
+                        if (ten.charAt(i) >= '0' && ten.charAt(i) <= '9') {
+                            temp.append(ten.charAt(i));
+                        } else {
+                            break;
+                        }
+                    }
+                    temp.reverse();
+                    size = Integer.parseInt(String.valueOf(temp));
+
+
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            return size;
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            super.onPostExecute(integer);
+            //progressDialog.dismiss();
+            dialog.dismiss();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        if (id == android.R.id.home) {
+            drawer.openDrawer(GravityCompat.START);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+
+    @Override
+    public boolean onNavigationItemSelected(MenuItem item) {
+        // Handle navigation view item clicks here.
+        switch (item.getItemId()) {
+
+            case R.id.nav_sport:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+
+                url = "https://wallpaperscraft.com/catalog/sport/";
+                TaskAllPage taskAllPage = new TaskAllPage();
+                taskAllPage.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Sport");
+
+                break;
+            case R.id.nav_3d:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/3d/";
+                TaskAllPage taskAllPage1 = new TaskAllPage();
+                taskAllPage1.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("3D");
+                break;
+            case R.id.nav_abtract:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/abstract/";
+                TaskAllPage taskAllPage2 = new TaskAllPage();
+                taskAllPage2.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Abtract");
+                break;
+            case R.id.nav_animals:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/animals/";
+                TaskAllPage taskAllPage3 = new TaskAllPage();
+                taskAllPage3.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Animals");
+                break;
+            case R.id.nav_anime:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/anime/";
+                TaskAllPage taskAllPage4 = new TaskAllPage();
+                taskAllPage4.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Anime");
+                break;
+            case R.id.nav_city:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/city/";
+                TaskAllPage taskAllPage5 = new TaskAllPage();
+                taskAllPage5.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("City");
+
+                break;
+            case R.id.nav_fantasy:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/fantasy/";
+                TaskAllPage taskAllPage6 = new TaskAllPage();
+                taskAllPage6.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Fantasy");
+                break;
+            case R.id.nav_girls:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                    customAdapter = null;
+                }
+                url = "https://wallpaperscraft.com/catalog/tv-series/";
+                TaskAllPage taskAllPage7 = new TaskAllPage();
+                taskAllPage7.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("TV-Series");
+                break;
+            case R.id.nav_nature:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/catalog/nature/";
+                TaskAllPage taskAllPage8 = new TaskAllPage();
+                taskAllPage8.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("Nature");
+                break;
+            case R.id.nav_all:
+                if (hinhAnhs != null) {
+                    hinhAnhs.clear();
+                }
+                url = "https://wallpaperscraft.com/all/";
+                TaskAllPage taskAllPage9 = new TaskAllPage();
+                taskAllPage9.execute(url + reso + "/");
+                task.cancel(true);
+                task = null;
+                task = new Task();
+                task.execute(url + reso + "/");
+                setTitle("All");
+                break;
+
+        }
+
+
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
+    }
+}

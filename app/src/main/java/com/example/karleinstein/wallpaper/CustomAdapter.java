@@ -3,8 +3,10 @@ package com.example.karleinstein.wallpaper;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
@@ -51,25 +54,26 @@ public class CustomAdapter extends BaseAdapter {
 
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
-        final LayoutInflater inflater= (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        final LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         ViewHolder viewHolder;
-        if (convertView==null)
-        {
-            viewHolder=new ViewHolder();
-            convertView=inflater.inflate(R.layout.custom_grid,parent,false);
+        if (convertView == null) {
+            viewHolder = new ViewHolder();
+            convertView = inflater.inflate(R.layout.custom_grid, parent, false);
             convertView.setTag(viewHolder);
+        } else {
+            viewHolder = (ViewHolder) convertView.getTag();
         }
-        else
-        {
-            viewHolder=(ViewHolder)convertView.getTag();
-        }
-        viewHolder.imgHinhAnh=convertView.findViewById(R.id.imgHinhAnh);
-        final HinhAnh hinhAnh= (HinhAnh) getItem(position);
-            //Picasso.with(context).setLoggingEnabled(false);
-        Glide.with(context).load(hinhAnh.hinhAnhz).into(viewHolder.imgHinhAnh);
+        viewHolder.imgHinhAnh = convertView.findViewById(R.id.imgHinhAnh);
+        final HinhAnh hinhAnh = (HinhAnh) getItem(position);
+        RequestOptions options = new RequestOptions();
+//        AnimationDrawable animationDrawable= (AnimationDrawable) ContextCompat.getDrawable(context,R.drawable.loading);
+//        animationDrawable.start();
+        options.placeholder(R.drawable.blocks);
+        Glide.with(context).load(hinhAnh.hinhAnhz).apply(options).into(viewHolder.imgHinhAnh);
         return convertView;
     }
-    private static class ViewHolder{
-        public  ImageView imgHinhAnh;
+
+    private static class ViewHolder {
+        ImageView imgHinhAnh;
     }
 }
